@@ -1,6 +1,6 @@
 <div align="center">
   
-# RevAgent
+# OutreachX
 
 **AI-powered multi-channel campaign automation platform**
 
@@ -765,17 +765,6 @@ Customers often have specific questions that generic bots can't answer. RevAgent
 
 By solving these core issues, RevAgent empowers businesses to scale their outreach effortlessly while building stronger, more localized connections with their customers.
 ---
-
-## Team
-
-**Team Async** — 
-
-| Name | Role |
-|---|---|
-| Ankur Bag | Team Lead |
-| Sohom Roy| Member |
-| Samrit Mukherjee | Member |
-| Ankit Karmakar | Member |
 
 ---
 
