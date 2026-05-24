@@ -37,7 +37,8 @@ export async function upsertDocumentChunks(
   campaignId: string,
   userId: string,
   docName: string,
-  text: string
+  text: string,
+  cloudinaryPublicId?: string
 ) {
   console.log(`📦 Chunking and embedding document: ${docName}`);
   
@@ -45,7 +46,11 @@ export async function upsertDocumentChunks(
   const chunksCol = campaignRef.collection("chunks");
 
   // Step 1: Clear old chunks for this document to prevent duplicates/stale data
-  const oldChunks = await chunksCol.where('docName', '==', docName).get();
+  const query = cloudinaryPublicId 
+    ? chunksCol.where('cloudinaryPublicId', '==', cloudinaryPublicId)
+    : chunksCol.where('docName', '==', docName);
+  
+  const oldChunks = await query.get();
   if (!oldChunks.empty) {
     const deleteBatch = db.batch();
     oldChunks.docs.forEach(doc => deleteBatch.delete(doc.ref));
@@ -67,6 +72,7 @@ export async function upsertDocumentChunks(
       embedding,
       index: i,
       createdAt: new Date(),
+      ...(cloudinaryPublicId ? { cloudinaryPublicId } : {}),
     });
 
     // Firestore batch limit is 500
