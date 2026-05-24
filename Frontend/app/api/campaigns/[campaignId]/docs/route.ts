@@ -83,7 +83,13 @@ export async function POST(request: NextRequest, { params }: Ctx) {
 
     // Update Vector Store for RAG
     if (extractedText && extractedText !== '[Text extraction failed]') {
-      await upsertDocumentChunks(campaignId, userId, uploadedFile.name, extractedText)
+      await upsertDocumentChunks(
+        campaignId,
+        userId,
+        uploadedFile.name,
+        extractedText,
+        cloudinaryResult.public_id
+      )
       try {
         await upsertCampaignDocumentVectors({
           userId,
@@ -181,7 +187,13 @@ export async function PUT(request: NextRequest, { params }: Ctx) {
 
     // Update Vector Store
     if (extractedText && extractedText !== '[Text extraction failed]') {
-      await upsertDocumentChunks(campaignId, userId, uploadedFile.name, extractedText)
+      await upsertDocumentChunks(
+        campaignId,
+        userId,
+        uploadedFile.name,
+        extractedText,
+        existingPublicId
+      )
       try {
         await upsertCampaignDocumentVectors({
           userId,
