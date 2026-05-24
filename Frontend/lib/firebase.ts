@@ -1,0 +1,1 @@
+console.log('This is the api.ts file in the frontend/app/lib directory.');
