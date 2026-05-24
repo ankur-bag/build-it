@@ -34,7 +34,52 @@ export async function GET(
       .doc(campaignId)
 
     const analysisDoc = await analysisDocRef.get()
-    
+
+    const callsSnap = await db_ref
+      .collection('users')
+      .doc(userId)
+      .collection('campaigns')
+      .doc(campaignId)
+      .collection('calls')
+      .get()
+
+    const callDocs = callsSnap.docs.map((doc) => ({
+      callId: doc.id,
+      ...doc.data(),
+    }))
+
+    const callLogMap = new Map<string, any>()
+    callDocs.forEach((call: any) => {
+      const phone = String(call.customerPhone || 'unknown')
+      const sanitized = phone.replace(/\D/g, '') || 'unknown'
+      const contactId = `phone_${sanitized}`
+      const timestamp = call.timestamp || call.createdAt || ''
+
+      if (!callLogMap.has(contactId)) {
+        callLogMap.set(contactId, {
+          contactId,
+          contactName: call.contactName || 'Unknown',
+          phone,
+          totalCalls: 0,
+          lastCallAt: timestamp,
+          calls: [],
+        })
+      }
+
+      const entry = callLogMap.get(contactId)
+      entry.calls.push(call)
+      entry.totalCalls += 1
+      if (!entry.lastCallAt || new Date(timestamp).getTime() > new Date(entry.lastCallAt).getTime()) {
+        entry.lastCallAt = timestamp
+      }
+    })
+
+    const callLogs = Array.from(callLogMap.values()).sort((a, b) => {
+      const timeA = new Date(a.lastCallAt || 0).getTime()
+      const timeB = new Date(b.lastCallAt || 0).getTime()
+      return timeB - timeA
+    })
+
     if (!analysisDoc.exists) {
       console.log(`📭 Analysis collection empty for campaign ${campaignId} - no data yet`)
       return NextResponse.json({
@@ -46,7 +91,8 @@ export async function GET(
         totalContacts: 0,
         whatsappConversations: [],
         answeredContacts: [],
-        missedContacts: []
+        missedContacts: [],
+        callLogs,
       }, { status: 200 })
     }
 
@@ -105,6 +151,7 @@ export async function GET(
       callsMissed,
       answeredContacts,
       missedContacts,
+      callLogs,
       
       // WhatsApp metrics from analysis collection
       whatsappMessagesSent,
