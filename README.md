@@ -338,6 +338,10 @@ WHATSAPP_ACCESS_TOKEN=
 # ── URLs ──────────────────────────────────────────────────────
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 BACKEND_URL=https://double-slash-backend.onrender.com
+
+# ── Pinecone ──────────────────────────────────────────────────────
+PINECONE_API_KEY=
+PINECONE_INDEX_NAME=
 ```
 
 #### `Backend/.env`
