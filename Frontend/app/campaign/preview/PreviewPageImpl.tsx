@@ -8,6 +8,12 @@ import textToSpeech from "@google-cloud/text-to-speech";
 import { VscCallOutgoing } from 'react-icons/vsc'
 import { BsFillFileTextFill } from 'react-icons/bs'
 import { MdKeyboardVoice } from 'react-icons/md'
+import { useAuth, useUser } from '@clerk/nextjs'
+import BillingSummary from "@/components/payment/BillingSummary"
+import LaunchGuard from "@/components/payment/LaunchGuard"
+import { calculateCampaignCost } from "@/lib/payment/calculator"
+import { firestorePayment } from "@/lib/payment/firestorePayment"
+import { paymentService } from "@/lib/payment/paymentService"
 
 interface Asset {
   url: string
@@ -52,6 +58,32 @@ export default function PreviewPageImpl({ campaignId: propCampaignId, fromCreati
 
   const campaignId = propCampaignId || queryParamId || campaign.campaignId
 
+  const { userId } = useAuth()
+  const { user } = useUser()
+  const [isPaid, setIsPaid] = useState(false)
+  const [checkingPayment, setCheckingPayment] = useState(true)
+
+  // Load launch payment status
+  useEffect(() => {
+    const checkPayment = async () => {
+      if (!campaignId) return
+      try {
+        setCheckingPayment(true)
+        const record = await paymentService.getLaunchPayment(campaignId)
+        setIsPaid(!!record)
+      } catch (err) {
+        console.error("Error checking payment:", err)
+      } finally {
+        setCheckingPayment(false)
+      }
+    }
+    checkPayment()
+  }, [campaignId])
+
+  const handlePaymentSuccess = () => {
+    setIsPaid(true)
+  }
+
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [loadedCampaign, setLoadedCampaign] = useState<LoadedCampaign | null>(null)
   const [loading, setLoading] = useState(true)
@@ -84,6 +116,12 @@ export default function PreviewPageImpl({ campaignId: propCampaignId, fromCreati
   const [callAudioUrl, setCallAudioUrl] = useState('')
   const [generatingAudio, setGeneratingAudio] = useState(false)
   const [audioChannelLoading, setAudioChannelLoading] = useState<'voice' | 'calls' | null>(null)
+
+  const pricing = calculateCampaignCost(
+    isEditing ? draft.channels : loadedCampaign?.channels,
+    isEditing ? draft.contactCount : (loadedCampaign?.contactCount || 0)
+  )
+  const isPaidOrFree = isPaid || (pricing.totalCost === 0)
 
   // Load campaign from database
   useEffect(() => {
@@ -1064,6 +1102,14 @@ export default function PreviewPageImpl({ campaignId: propCampaignId, fromCreati
             ⚠️ You must have at least 1 contact to save changes. Please add a contacts file.
           </div>
         )}
+
+        {/* Billing & Payment Section */}
+        {!isEditing && loadedCampaign && (
+          <div className="space-y-4 pt-4 border-t border-white/10">
+            <h3 className="text-sm font-semibold text-slate-300">Campaign Billing</h3>
+            <BillingSummary pricing={pricing} theme="dark" />
+          </div>
+        )}
       </div>
 
       {/* Actions */}
@@ -1077,6 +1123,7 @@ export default function PreviewPageImpl({ campaignId: propCampaignId, fromCreati
         <div className="flex gap-3">
           {!isEditing && (
             <>
+              {/* Other buttons unchanged */}
               <button
                 onClick={async () => {
                   setIsRegenerating(true)
@@ -1130,13 +1177,22 @@ export default function PreviewPageImpl({ campaignId: propCampaignId, fromCreati
               >
                 Edit
               </button>
-              <button
-                onClick={handleLaunch}
-                disabled={isLaunching}
-                className="px-6 py-2.5 rounded-lg bg-white hover:bg-white/95 text-black  transition shadow-[0_4px_12px_rgba(255,255,255,0.2)] cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+
+              <LaunchGuard 
+                campaign={loadedCampaign}
+                campaignId={campaignId || ""} 
+                userId={userId || "mock_user"}
+                requiredAmount={pricing.launchCost || pricing.totalCost}
+                onSuccess={() => setIsPaid(true)}
               >
-                {isLaunching ? 'Launching...' : 'Launch Campaign'}
-              </button>
+                <button
+                  onClick={handleLaunch}
+                  disabled={isLaunching || checkingPayment}
+                  className="px-6 py-2.5 rounded-lg bg-white hover:bg-white/95 text-black transition shadow-[0_4px_12px_rgba(255,255,255,0.2)] cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLaunching ? 'Launching...' : 'Launch Campaign'}
+                </button>
+              </LaunchGuard>
             </>
           )}
           {isEditing && (

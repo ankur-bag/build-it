@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { CampaignProvider } from './CampaignContext'
+import WalletButton from '@/components/payment/WalletButton'
 
 const steps = [
   { name: 'Title', path: '/campaign/title' },
@@ -47,18 +48,13 @@ export default function CampaignLayout({ children }: { children: React.ReactNode
             Back
           </a>
           <div className="flex items-center gap-4">
+            <WalletButton />
             <Link
               href="/yourcampaigns"
-              className="text-xl font-medium text-black px-2 py-1.5 border-2 border-black rounded-xl hover:bg-black/10 transition cursor-pointer"
+              className="text-lg font-medium text-black px-4 py-2 border-2 border-black rounded-2xl hover:bg-black/10 transition cursor-pointer"
             >
               Your Campaigns
             </Link>
-            {/* <Link
-              href="/inbox"
-              className="text-xl font-medium text-black px-2 py-1.5 border-2 border-black rounded-xl hover:bg-black/10 transition cursor-pointer"
-            >
-              Inbox
-            </Link> */}
           </div>
         </div>
 

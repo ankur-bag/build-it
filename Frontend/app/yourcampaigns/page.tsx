@@ -7,6 +7,7 @@ import { Trash2 } from 'lucide-react'
 import { VscCallOutgoing } from 'react-icons/vsc'
 import { BsFillFileTextFill } from 'react-icons/bs'
 import { MdKeyboardVoice } from 'react-icons/md'
+import WalletButton from '@/components/payment/WalletButton'
 
 interface Campaign {
   id: string
@@ -175,6 +176,7 @@ export default function YourCampaignsPage() {
                 Home
               </Link>
               <div className="flex items-center gap-4">
+                <WalletButton />
                 <Link
                   href="/campaign/title"
                   className="px-6 py-2.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-all duration-300 text-sm font-medium font-sans shadow-lg shadow-black/10 hover:-translate-y-0.5"

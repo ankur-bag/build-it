@@ -11,6 +11,10 @@ import { IoMdAnalytics } from 'react-icons/io'
 import { TbFileUploadFilled, TbFile } from 'react-icons/tb'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ChannelConfig } from '@/campaign/CampaignContext'
+import { useAuth } from '@clerk/nextjs'
+import PaymentGuard from '@/components/payment/PaymentGuard'
+import LaunchGuard from '@/components/payment/LaunchGuard'
+import { calculateCampaignCost } from '@/lib/payment/calculator'
 
 interface DocumentAsset {
   url?: string;
@@ -62,6 +66,7 @@ export default function CampaignDetailPage() {
   const router = useRouter()
   const params = useParams()
   const campaignId = params.campaignId as string
+  const { userId } = useAuth()
 
   const [loadedCampaign, setLoadedCampaign] = useState<LoadedCampaign | null>(null)
   const [loading, setLoading] = useState(true)
@@ -393,13 +398,20 @@ export default function CampaignDetailPage() {
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-3"
           >
-            <button
-              onClick={handleRelaunch}
-              disabled={relaunching}
-              className="px-6 py-2.5 rounded-full bg-white/60 border border-white/70 text-slate-700 hover:bg-white/80 transition-all text-sm font-medium flex items-center gap-2 disabled:opacity-50 shadow-sm"
+            <LaunchGuard
+              campaign={loadedCampaign}
+              userId={userId || "mock_user"}
+              requiredAmount={calculateCampaignCost(loadedCampaign.channels, loadedCampaign.contactCount).relaunchCost || 0}
+              onSuccess={handleRelaunch}
+              relaunch={true}
             >
-              {relaunching ? <span className="animate-spin">⏳</span> : 'Relaunch'}
-            </button>
+              <button
+                disabled={relaunching}
+                className="px-6 py-2.5 rounded-full bg-white/60 border border-white/70 text-slate-700 hover:bg-white/80 transition-all text-sm font-medium flex items-center gap-2 disabled:opacity-50 shadow-sm"
+              >
+                {relaunching ? <span className="animate-spin">⏳</span> : 'Relaunch'}
+              </button>
+            </LaunchGuard>
             <Link
               href={`/yourcampaigns/${loadedCampaign.id}/analytics`}
               className="px-6 py-2.5 rounded-full bg-white/60 border border-white/70 text-slate-700 hover:bg-white/80 transition-all text-sm font-medium flex items-center gap-2 shadow-sm"
@@ -408,13 +420,18 @@ export default function CampaignDetailPage() {
               Analytics
             </Link>
             {loadedCampaign?.channels?.calls?.enabled && (
-              <button
-                onClick={handleMakeCalls}
-                disabled={makingCalls}
-                className="px-6 py-2.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-all text-sm font-semibold flex items-center gap-2 disabled:opacity-50 shadow-[0_0_20px_rgba(15,23,42,0.15)]"
+              <PaymentGuard
+                campaign={loadedCampaign}
+                userId={userId || "mock_user"}
+                onSuccess={handleMakeCalls}
               >
-                {makingCalls ? <span className="animate-spin cursor-pointer">⏳</span> : <><VscCallOutgoing className="text-lg" /> Make Call</>}
-              </button>
+                <button
+                  disabled={makingCalls}
+                  className="px-6 py-2.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-all text-sm font-semibold flex items-center gap-2 disabled:opacity-50 shadow-[0_0_20px_rgba(15,23,42,0.15)]"
+                >
+                  {makingCalls ? <span className="animate-spin">⏳</span> : <><VscCallOutgoing className="text-lg" /> Make Call</>}
+                </button>
+              </PaymentGuard>
             )}
           </motion.div>
         </header>
