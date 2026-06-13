@@ -49,19 +49,103 @@ export const LANGUAGE_CODE_MAP: Record<string, SupportedLanguage> = {
   'pa-IN': 'pa-IN',
 };
 
-/** Sarvam TTS speaker presets for each language */
-const SARVAM_SPEAKERS: Record<SupportedLanguage, string> = {
-  'en-IN': 'meera',
-  'hi-IN': 'meera',
-  'bn-IN': 'meera',
-  'ta-IN': 'meera',
-  'te-IN': 'meera',
-  'mr-IN': 'meera',
-  'gu-IN': 'meera',
-  'kn-IN': 'meera',
-  'ml-IN': 'meera',
-  'pa-IN': 'meera',
+/** Top 5 Indian languages — full Sarvam TTS + STT tuning */
+export const TOP_INDIC_LANGUAGES: SupportedLanguage[] = [
+  'en-IN',
+  'hi-IN',
+  'bn-IN',
+  'ta-IN',
+  'te-IN',
+];
+
+export interface SarvamLanguageProfile {
+  speaker: string;
+  pace: number;
+  temperature: number;
+}
+
+/** Per-language voice tuning — lighter, conversational telephony */
+export const SARVAM_LANGUAGE_PROFILES: Record<SupportedLanguage, SarvamLanguageProfile> = {
+  'en-IN': { speaker: 'shubh', pace: 1.0, temperature: 0.9 },
+  'hi-IN': { speaker: 'shubh', pace: 1.0, temperature: 0.9 },
+  'bn-IN': { speaker: 'rehan', pace: 1.08, temperature: 0.92 },
+  'ta-IN': { speaker: 'rohan', pace: 1.0, temperature: 0.9 },
+  'te-IN': { speaker: 'shubh', pace: 1.0, temperature: 0.9 },
+  'mr-IN': { speaker: 'shubh', pace: 1.0, temperature: 0.9 },
+  'gu-IN': { speaker: 'shubh', pace: 1.0, temperature: 0.9 },
+  'kn-IN': { speaker: 'shubh', pace: 1.0, temperature: 0.9 },
+  'ml-IN': { speaker: 'shubh', pace: 1.0, temperature: 0.9 },
+  'pa-IN': { speaker: 'shubh', pace: 1.0, temperature: 0.9 },
 };
+
+/** Default TTS voice — shubh = warm, lighter male (less deep than mani) */
+export const SARVAM_DEFAULT_SPEAKER =
+  process.env.SARVAM_TTS_SPEAKER?.trim() || 'shubh';
+
+export function getLanguageProfile(languageCode: SupportedLanguage): SarvamLanguageProfile {
+  const base = SARVAM_LANGUAGE_PROFILES[languageCode] ?? SARVAM_LANGUAGE_PROFILES['en-IN'];
+
+  const envSpeakerByLang: Partial<Record<SupportedLanguage, string | undefined>> = {
+    'en-IN': process.env.SARVAM_TTS_SPEAKER_EN?.trim(),
+    'hi-IN': process.env.SARVAM_TTS_SPEAKER_HI?.trim(),
+    'bn-IN': process.env.SARVAM_TTS_SPEAKER_BN?.trim(),
+    'ta-IN': process.env.SARVAM_TTS_SPEAKER_TA?.trim(),
+    'te-IN': process.env.SARVAM_TTS_SPEAKER_TE?.trim(),
+  };
+
+  const envSpeaker = envSpeakerByLang[languageCode]?.trim();
+  if (envSpeaker) return { ...base, speaker: envSpeaker };
+
+  return base;
+}
+
+export function getSpeakerForLanguage(languageCode: SupportedLanguage): string {
+  return getLanguageProfile(languageCode).speaker;
+}
+
+export function getPaceForLanguage(languageCode: SupportedLanguage): number {
+  return getLanguageProfile(languageCode).pace;
+}
+
+export function getTemperatureForLanguage(languageCode: SupportedLanguage): number {
+  return getLanguageProfile(languageCode).temperature;
+}
+
+/** @deprecated Use getSpeakerForLanguage() */
+export function getConsistentSpeaker(languageCode?: SupportedLanguage): string {
+  return getSpeakerForLanguage(languageCode ?? 'en-IN');
+}
+
+/** @deprecated Use getConsistentSpeaker() — kept for direct API callers */
+export const SARVAM_SPEAKERS: Record<SupportedLanguage, string> = {
+  'en-IN': SARVAM_DEFAULT_SPEAKER,
+  'hi-IN': SARVAM_DEFAULT_SPEAKER,
+  'bn-IN': SARVAM_DEFAULT_SPEAKER,
+  'ta-IN': SARVAM_DEFAULT_SPEAKER,
+  'te-IN': SARVAM_DEFAULT_SPEAKER,
+  'mr-IN': SARVAM_DEFAULT_SPEAKER,
+  'gu-IN': SARVAM_DEFAULT_SPEAKER,
+  'kn-IN': SARVAM_DEFAULT_SPEAKER,
+  'ml-IN': SARVAM_DEFAULT_SPEAKER,
+  'pa-IN': SARVAM_DEFAULT_SPEAKER,
+};
+
+/** Sarvam bulbul:v3 model (replaces deprecated bulbul:v1) */
+export const SARVAM_TTS_MODEL =
+  process.env.SARVAM_TTS_MODEL?.trim() || 'bulbul:v3';
+
+/** Pace/speed for natural telephony rhythm (bulbul:v3 range 0.5–2.0) */
+export function getSafeSarvamPace(): number {
+  const raw = Number(process.env.SARVAM_VOICE_SPEED ?? process.env.SARVAM_TTS_PACE ?? '0.82');
+  if (!Number.isFinite(raw) || raw <= 0) return 0.82;
+  return Math.min(Math.max(raw, 0.55), 1.1);
+}
+
+export function getSafeSarvamTemperature(): number {
+  const raw = Number(process.env.SARVAM_TTS_TEMPERATURE ?? '0.85');
+  if (!Number.isFinite(raw)) return 0.85;
+  return Math.min(Math.max(raw, 0.5), 1.2);
+}
 
 // ── Language Detection ────────────────────────────────────────────────────────
 
@@ -116,23 +200,103 @@ export function detectScriptLanguage(text: string): SupportedLanguage {
   return sorted[0][0];
 }
 
+/** Detect Hinglish / Benglish when user speaks Indian languages in Latin script */
+export function detectRomanizedLanguage(text: string): SupportedLanguage | null {
+  if (!text?.trim()) return null;
+
+  const lower = text.toLowerCase();
+
+  const bengaliRoman =
+    /\b(ami|apni|tumi|kemon|bhalo|bolun|bolben|bolchi|achen|ache|ki|keno|kothay|dhonnobad|nomoshkar|ektu|hobe|korbo|bolto|shunbo)\b/i;
+  const hindiRoman =
+    /\b(haan|han|nahi|nahin|ji|kya|kaise|theek|achha|accha|shukriya|namaste|boliye|suniye|samjhe|matlab|bataiye|milega)\b/i;
+  const tamilRoman =
+    /\b(vanakkam|epdi|irukku|sollunga|nandri|illai|seri|pannunga)\b/i;
+  const teluguRoman =
+    /\b(namaskaram|ela|undhi|cheppandi|dhanyavadam|ledu|sare)\b/i;
+
+  const scores: Partial<Record<SupportedLanguage, number>> = {};
+  if (bengaliRoman.test(lower)) scores['bn-IN'] = (scores['bn-IN'] ?? 0) + 2;
+  if (hindiRoman.test(lower)) scores['hi-IN'] = (scores['hi-IN'] ?? 0) + 2;
+  if (tamilRoman.test(lower)) scores['ta-IN'] = (scores['ta-IN'] ?? 0) + 2;
+  if (teluguRoman.test(lower)) scores['te-IN'] = (scores['te-IN'] ?? 0) + 2;
+
+  const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  if (ranked.length === 0) return null;
+  return ranked[0][0] as SupportedLanguage;
+}
+
+/** True when text is plain English/Latin with no Indian-language roman markers */
+export function isClearlyEnglish(text: string): boolean {
+  if (!text?.trim()) return true;
+
+  if (detectScriptLanguage(text) !== 'en-IN') return false;
+  if (detectRomanizedLanguage(text)) return false;
+
+  const latinLetters = (text.match(/[a-zA-Z]/g) ?? []).length;
+  return latinLetters >= Math.max(3, text.length * 0.35);
+}
+
+/**
+ * TTS language from assistant reply text — never stick to a prior user language.
+ * Assistant script/roman cues win; plain English stays en-IN.
+ */
+export function resolveTtsLanguageFromText(
+  assistantText: string,
+  userTurn?: { text?: string; detectedLanguage?: string },
+): SupportedLanguage {
+  const fromScript = detectScriptLanguage(assistantText);
+  if (fromScript !== 'en-IN') return fromScript;
+
+  const fromRoman = detectRomanizedLanguage(assistantText);
+  if (fromRoman) return fromRoman;
+
+  if (isClearlyEnglish(assistantText)) return 'en-IN';
+
+  if (userTurn?.detectedLanguage) {
+    const fromDetected = resolveLanguageCode(userTurn.detectedLanguage);
+    if (fromDetected !== 'en-IN') return fromDetected;
+  }
+
+  if (userTurn?.text) {
+    const userScript = detectScriptLanguage(userTurn.text);
+    if (userScript !== 'en-IN') return userScript;
+
+    const userRoman = detectRomanizedLanguage(userTurn.text);
+    if (userRoman) return userRoman;
+
+    if (isClearlyEnglish(userTurn.text)) return 'en-IN';
+  }
+
+  return 'en-IN';
+}
+
 // ── Text-to-Speech ────────────────────────────────────────────────────────────
+
+export type SarvamOutputCodec = 'wav' | 'linear16' | 'mulaw';
 
 export interface SarvamTTSOptions {
   text: string;
   languageCode: SupportedLanguage;
   /** Sarvam speaker name. Defaults to the preset for the language. */
   speaker?: string;
-  /** Sarvam TTS model. Defaults to "bulbul:v1" */
+  /** Sarvam TTS model. Defaults to bulbul:v3 */
   model?: string;
   /** Target sample rate in Hz. Defaults to 24000 */
   sampleRate?: number;
+  /** linear16 = raw 16-bit PCM (required for Vapi custom-voice) */
+  outputAudioCodec?: SarvamOutputCodec;
+  /** bulbul:v3 expressiveness 0.01–2.0 — higher = more human, less flat */
+  temperature?: number;
+  pace?: number;
 }
 
 export interface SarvamTTSResult {
-  /** Base-64 encoded WAV audio */
+  /** Base-64 encoded audio (PCM when outputAudioCodec=linear16) */
   audioBase64: string;
   languageCode: SupportedLanguage;
+  outputAudioCodec: SarvamOutputCodec;
+  sampleRate: number;
 }
 
 /**
@@ -149,10 +313,31 @@ export async function synthesiseSpeech(options: SarvamTTSOptions): Promise<Sarva
   const {
     text,
     languageCode,
-    speaker = SARVAM_SPEAKERS[languageCode] ?? 'meera',
-    model = 'bulbul:v1',
+    speaker = getSpeakerForLanguage(languageCode),
+    model = SARVAM_TTS_MODEL,
     sampleRate = 24000,
+    outputAudioCodec = 'wav',
+    temperature = getTemperatureForLanguage(languageCode),
+    pace = getPaceForLanguage(languageCode),
   } = options;
+
+  const payload: Record<string, unknown> = {
+    text,
+    target_language_code: languageCode,
+    speaker,
+    model,
+    pace,
+    speech_sample_rate: sampleRate,
+    output_audio_codec: outputAudioCodec,
+  };
+
+  if (model.startsWith('bulbul:v3')) {
+    payload.temperature = temperature;
+  } else {
+    payload.pitch = 0;
+    payload.loudness = 1.4;
+    payload.enable_preprocessing = true;
+  }
 
   const response = await fetch('https://api.sarvam.ai/text-to-speech', {
     method: 'POST',
@@ -160,17 +345,7 @@ export async function synthesiseSpeech(options: SarvamTTSOptions): Promise<Sarva
       'Content-Type': 'application/json',
       'api-subscription-key': apiKey,
     },
-    body: JSON.stringify({
-      inputs: [text],
-      target_language_code: languageCode,
-      speaker,
-      model,
-      pitch: 0,
-      pace: 1.0,
-      loudness: 1.5,
-      enable_preprocessing: true,
-      sample_rate: sampleRate,
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -187,6 +362,8 @@ export async function synthesiseSpeech(options: SarvamTTSOptions): Promise<Sarva
   return {
     audioBase64: data.audios[0] as string,
     languageCode,
+    outputAudioCodec,
+    sampleRate,
   };
 }
 

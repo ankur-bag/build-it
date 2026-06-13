@@ -2,17 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/firebase/admin';
 import { callAgent } from '@/lib/call-agent';
+import { getPublicAppUrl } from '@/lib/app-url';
 
 type Context = { params: Promise<{ campaignId: string }> };
+
+/** Vercel must finish placing calls before the function exits */
+export const maxDuration = 60;
 
 /**
  * POST /api/campaigns/[campaignId]/make-calls
  *
  * Initiates AI-powered outbound calls to all contacts in the campaign.
- * Each call:
- *  1. Creates a call record in analysis collection
- *  2. Initiates call via Vapi
- *  3. Webhook updates call record when it ends
  */
 export async function POST(
   request: NextRequest,
@@ -46,8 +46,8 @@ export async function POST(
 
     console.log('====== MAKE CALLS (AI AGENT) DEBUG START ======');
     console.log('Campaign ID:', campaignId);
+    console.log('Deployment URL:', getPublicAppUrl());
 
-    // Check if calls channel is enabled
     const callsEnabled = campaignData.channels?.calls?.enabled;
     if (!callsEnabled) {
       console.log('❌ Calls channel is disabled');
@@ -57,14 +57,12 @@ export async function POST(
       );
     }
 
-    // Get contacts from campaign data
     const contacts = campaignData.contacts || campaignData.contactsSummary?.items || [];
 
     if (contacts.length === 0) {
       return NextResponse.json({ error: 'No contacts found to call' }, { status: 400 });
     }
 
-    // Extract phone numbers
     const phoneNumbers: string[] = contacts
       .map((c: any) => c.phone)
       .filter((p: any): p is string => !!p && typeof p === 'string' && p.trim().length > 0);
@@ -80,7 +78,6 @@ export async function POST(
     console.log(`   Contacts: ${contacts.length}, Valid phones: ${phoneNumbers.length}`);
     console.log('====== MAKE CALLS DEBUG END ======');
 
-    // Initialize analysis collection IMMEDIATELY (sync, before any async calls)
     const analysisRef = db
       .collection('analysis')
       .doc(userId)
@@ -95,11 +92,7 @@ export async function POST(
         campaignTitle: campaignData.title || 'Campaign',
         createdAt: new Date(),
         updatedAt: new Date(),
-        calls: {
-          total: 0,
-          answered: 0,
-          missed: 0,
-        },
+        calls: { total: 0, answered: 0, missed: 0 },
         answered: [],
         missed: [],
         initiated: [],
@@ -112,37 +105,42 @@ export async function POST(
       });
     }
 
-    // Determine the public base URL for webhooks
-    const baseUrl =
-      process.env.VOICE_BASE_URL ||
-      process.env.NEXTAUTH_URL ||
-      'http://localhost:3000';
+    const baseUrl = getPublicAppUrl();
 
-    // Kick off calls (non-blocking — respond immediately for large contact lists)
-    callAgent({ phoneNumbers, campaignId, userId, baseUrl })
-      .then(async (callResult) => {
-        // Update campaign with call results
-        await ref.update({
-          callsInitiated: true,
-          callsInitiatedAt: new Date(),
-          callResults: {
-            totalAttempted: callResult.totalCalls,
-            successfulCalls: callResult.successfulCalls,
-            failedCalls: callResult.failedCalls,
-            errors: callResult.errors,
-          },
-        });
-        console.log(`✅ Campaign ${campaignId} calls complete — ${callResult.successfulCalls}/${callResult.totalCalls} succeeded`);
-      })
-      .catch((err) => {
-        console.error(`❌ callAgent failed for campaign ${campaignId}:`, err.message);
+    // Await on Vercel — fire-and-forget gets killed when the function returns
+    const callResult = await callAgent({ phoneNumbers, campaignId, userId, baseUrl });
+
+    await ref.update({
+      callsInitiated: true,
+      callsInitiatedAt: new Date(),
+      callResults: {
+        totalAttempted: callResult.totalCalls,
+        successfulCalls: callResult.successfulCalls,
+        failedCalls: callResult.failedCalls,
+        errors: callResult.errors,
+      },
+    });
+
+    console.log(
+      `✅ Campaign ${campaignId} calls complete — ${callResult.successfulCalls}/${callResult.totalCalls} succeeded`,
+    );
+
+    if (callResult.failedCalls > 0) {
+      return NextResponse.json({
+        success: false,
+        campaignId,
+        message: `Only ${callResult.successfulCalls}/${callResult.totalCalls} call(s) connected.`,
+        totalContacts: phoneNumbers.length,
+        callResults: callResult,
       });
+    }
 
     return NextResponse.json({
       success: true,
       campaignId,
-      message: `AI calling agent initiated for ${phoneNumbers.length} contact(s). Calls are being placed now.`,
+      message: `AI calling agent completed for ${phoneNumbers.length} contact(s).`,
       totalContacts: phoneNumbers.length,
+      callResults: callResult,
     });
   } catch (error) {
     console.error('Make-calls route error:', error);

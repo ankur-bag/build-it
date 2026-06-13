@@ -272,7 +272,12 @@ export default function CampaignDetailPage() {
 
       if (!response.ok) throw new Error(data.error || 'Failed to make calls')
 
-      setCallSuccess(`📞 Calls initiated successfully for ${data.totalContacts} contact(s)! `)
+      if (data.success === false && data.callResults?.errors?.length) {
+        const detail = data.callResults.errors.map((e: { phone: string; error: string }) => `${e.phone}: ${e.error}`).join(' | ')
+        throw new Error(detail || data.message || 'Some calls failed to connect')
+      }
+
+      setCallSuccess(`📞 Calls completed for ${data.totalContacts} contact(s)!`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to make calls')
     } finally {

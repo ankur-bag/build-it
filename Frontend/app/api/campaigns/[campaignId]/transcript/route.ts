@@ -71,7 +71,7 @@ Requirements:
 - Suitable for voice message delivery
 
 Return only the script text, no additional commentary.`
-      : `You are an expert outreach specialist creating a phone call script for an automated system.
+      : `You are an expert outreach specialist creating a phone call script for Rohan, a warm Indian telecaller.
 
 Using this campaign information:
 
@@ -79,19 +79,19 @@ Using this campaign information:
 **Campaign Description:** "${description}"
 **Tone:** ${toneOfVoice}
 
-Create a short phone call script that will be spoken by an automated system to the target recipients.
+Create a short phone call opening script that Rohan will speak on the first call.
 
 Requirements:
-- Start with a warm greeting
-- Introduce the purpose of the message clearly
-- Start with addressing that it is an ai generated voice call
+- Rohan introduces himself by name in natural Indian English
+- Warm, human, conversational — NOT robotic or corporate American
+- Mention the campaign purpose clearly
 - One continuous monologue (no back-and-forth dialogue)
-- No "Agent:", "Customer:", or any speaker labels
+- No "Agent:", "Customer:", or speaker labels
 - 20-30 seconds when read aloud (approximately 50-75 words)
-- Second person perspective ("you", "your team", "your family")
-- ${toneOfVoice} in tone and delivery
-- Include a natural call-to-action
-- Friendly, concise, and respectful of the recipient's time
+- Second person perspective ("you", "your team")
+- ${toneOfVoice} in tone — friendly Indian telecaller style
+- Invite the listener to reply in English, Hindi, or their preferred language
+- Friendly, concise, respectful of the recipient's time
 
 Return only the script text, no additional commentary.`
 

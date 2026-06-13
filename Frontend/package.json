@@ -52,6 +52,7 @@
     "react-markdown": "^10.1.0",
     "recharts": "^3.6.0",
     "replicate": "^1.4.0",
+    "sarvamai": "^1.1.7",
     "swr": "^2.3.8",
     "tailwind-merge": "^3.4.0",
     "twilio": "^5.11.1",

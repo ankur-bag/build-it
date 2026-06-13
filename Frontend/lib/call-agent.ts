@@ -165,18 +165,16 @@ export async function callAgent({
         // 3. Trigger Vapi Call with Dynamic Data
         await triggerOutboundCall({
           customerPhoneNumber: phone,
-          customerName: `Customer (${phone})`,
           campaignTitle,
           campaignDescription,
           docsText,
           orderedQuestions,
           userId,
-          campaignId
+          campaignId,
         });
 
-        console.log(`   ✅ Vapi outbound call initiated for ${phone}`);
+        console.log(`   ✅ Call connected for ${phone}`);
 
-        // 4. Record initial call in analytics
         await recordInitialCall(userId, campaignId, phone);
 
         result.successfulCalls++;

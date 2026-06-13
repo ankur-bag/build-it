@@ -12,7 +12,18 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 const isPublicRoute = createRouteMatcher(["/", "/sign-up(.*)", "/sign-in(.*)"]);
+
+/** Vapi + Sarvam webhooks must be reachable without Clerk auth */
+const isWebhookRoute = createRouteMatcher([
+  "/api/vapi/webhook(.*)",
+  "/api/sarvam/tts(.*)",
+]);
+
 export default clerkMiddleware(async (auth, req: NextRequest) => {
+  if (isWebhookRoute(req)) {
+    return;
+  }
+
   const { userId } = await auth();
 
   // If not authenticated and trying to access public routes, allow
