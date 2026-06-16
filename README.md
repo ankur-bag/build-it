@@ -14,6 +14,10 @@ Launch, manage, and analyze outreach campaigns across WhatsApp, Voice, and AI Ph
 [![Pinecone](https://img.shields.io/badge/VectorDB-Pinecone-blue?logo=pinecone)](https://www.pinecone.io)
 [![Razorpay](https://img.shields.io/badge/Payments-Razorpay-blue)](https://razorpay.com)
 
+**Live Production URL:** [https://buildit-outreachx-1047516654251.europe-west1.run.app/](https://buildit-outreachx-1047516654251.europe-west1.run.app/)
+
+[![OutreachX Demo Video](https://img.youtube.com/vi/qhHkM_AOVKc/0.jpg)](https://www.youtube.com/watch?v=qhHkM_AOVKc)
+
 </div>
 
 ---
@@ -353,8 +357,11 @@ WHATSAPP_PHONE_NUMBER_ID=
 WHATSAPP_ACCESS_TOKEN=
 
 # ── URLs ──────────────────────────────────────────────────────
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-BACKEND_URL=http://localhost:3001
+# Local Development:
+# NEXT_PUBLIC_APP_URL=http://localhost:3000
+# BACKEND_URL=http://localhost:3001
+# Production GCP Cloud Run:
+NEXT_PUBLIC_APP_URL=https://buildit-outreachx-1047516654251.europe-west1.run.app
 
 # ── Pinecone ──────────────────────────────────────────────────
 PINECONE_API_KEY=
@@ -372,8 +379,12 @@ WHATSAPP_PHONE_NUMBER_ID=
 WHATSAPP_ACCESS_TOKEN=
 GEMINI_WHATSAPP_API_KEY=
 
-PORT=3001
-FRONTEND_URL=http://localhost:3000
+# Local Development:
+# PORT=3001
+# FRONTEND_URL=http://localhost:3000
+# Production GCP Cloud Run:
+PORT=8080
+FRONTEND_URL=https://buildit-outreachx-1047516654251.europe-west1.run.app
 ```
 
 ### Running Locally
@@ -398,6 +409,33 @@ cd Backend
 npm install
 npm run dev
 # Runs on http://localhost:3001
+```
+
+### Production Deployment on GCP (Google Cloud Run)
+
+Both the Next.js Frontend and Express Backend are deployed on **Google Cloud Platform (GCP)** via **Google Cloud Run**.
+
+#### 1. Deploy the Express Backend
+The Backend is deployed to GCP Cloud Run directly from the source directory using Google Cloud Buildpacks:
+```bash
+cd Backend
+gcloud run deploy outreachx-backend \
+  --source . \
+  --region europe-west1 \
+  --allow-unauthenticated \
+  --set-env-vars="PORT=8080,FRONTEND_URL=https://buildit-outreachx-1047516654251.europe-west1.run.app"
+```
+*(Ensure all other database and third-party integration API keys are also configured as environment variables in the Cloud Run configuration).*
+
+#### 2. Deploy the Next.js Frontend
+The Frontend is deployed to GCP Cloud Run using the multi-stage Dockerfile located at the root of the workspace:
+```bash
+# Deploys using the root Dockerfile for Next.js standalone builds
+gcloud run deploy outreachx-frontend \
+  --source . \
+  --region europe-west1 \
+  --allow-unauthenticated \
+  --set-env-vars="NEXT_PUBLIC_APP_URL=https://buildit-outreachx-1047516654251.europe-west1.run.app,BACKEND_URL=https://buildit-outreachx-1047516654251.europe-west1.run.app"
 ```
 
 ---
