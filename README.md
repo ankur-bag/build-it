@@ -27,7 +27,7 @@ Launch, manage, and analyze outreach campaigns across WhatsApp, Voice, and AI Ph
 > [!WARNING]
 > **Notice:** WhatsApp messaging and outbound phone calls will not work for external/unverified users, as this project is currently configured with a trial Twilio account and a free Meta Business API sandbox account.
 > 
-> *For testing, only verified recipient numbers registered in our Meta/Twilio sandbox environments will receive messages or calls.
+> For testing, only verified recipient numbers registered in our Meta/Twilio sandbox environments will receive messages or calls.
 
 ## Table of Contents
 
