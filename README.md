@@ -16,9 +16,25 @@ Launch, manage, and analyze outreach campaigns across WhatsApp, Voice, and AI Ph
 [![Pinecone](https://img.shields.io/badge/VectorDB-Pinecone-blue?logo=pinecone)](https://www.pinecone.io)
 [![Razorpay](https://img.shields.io/badge/Payments-Razorpay-blue)](https://razorpay.com)
 
-**Live Production URL:** [https://buildit-outreachx-1047516654251.europe-west1.run.app/](https://buildit-outreachx-1047516654251.europe-west1.run.app/)
+<p align="center">
+  <a href="https://buildit-outreachx-1047516654251.europe-west1.run.app/">
+    <strong>🚀 Live Application</strong>
+  </a>
+  &nbsp;&nbsp;•&nbsp;&nbsp;
+  <a href="https://www.youtube.com/watch?v=qhHkM_AOVKc">
+    <strong>🎥 Demo Video</strong>
+  </a>
+</p>
 
-[![OutreachX Demo Video](https://img.youtube.com/vi/qhHkM_AOVKc/0.jpg)](https://www.youtube.com/watch?v=qhHkM_AOVKc)
+<p align="center">
+  <sub>Try the platform or watch the complete walkthrough</sub>
+</p>
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=qhHkM_AOVKc">
+    <img src="https://img.youtube.com/vi/qhHkM_AOVKc/hqdefault.jpg" alt="OutreachX Demo">
+  </a>
+</p>
 
 </div>
 
